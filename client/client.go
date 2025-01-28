@@ -17,13 +17,14 @@ var (
 	dbClient DbClient
 )
 
-type client struct {
-	db *sql.DB
+type DbClient interface {
+	Exec(query string, args ...any) (result, error)
+	Query(query string, args ...any) (rows, error)
+	QueryRow(query string, args ...any) row
 }
 
-type DbClient interface {
-	Query(query string, args ...any) (rows, error)
-	Exec(query string, args ...any) (result, error)
+type client struct {
+	db *sql.DB
 }
 
 func Open(driverName string, dataSourceName string) (DbClient, error) {
@@ -41,11 +42,13 @@ func Open(driverName string, dataSourceName string) (DbClient, error) {
 		return nil, err
 	}
 
-	dbClient := &client{
-		db: database,
-	}
+	dbClient := &client{db: database}
 
 	return dbClient, nil
+}
+
+func (c *client) Exec(query string, args ...any) (result, error) {
+	return c.db.Exec(query, args...)
 }
 
 func (c *client) Query(query string, args ...any) (rows, error) {
@@ -54,15 +57,14 @@ func (c *client) Query(query string, args ...any) (rows, error) {
 		return nil, err
 	}
 
-	res := dbRows{
-		rows: rows,
-	}
+	res := dbRows{rows: rows}
 
 	return &res, nil
 }
 
-func (c *client) Exec(query string, args ...any) (result, error) {
-	return c.db.Exec(query, args...)
+func (c *client) QueryRow(query string, args ...any) row {
+	row := c.db.QueryRow(query, args...)
+	return &dbRow{row: row}
 }
 
 func isProduction() bool {

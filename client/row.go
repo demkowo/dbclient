@@ -1,30 +1,22 @@
 package dbclient
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
-type dbRows struct {
-	rows *sql.Rows
-}
-
-type rows interface {
-	Next() bool
-	Close() error
-	Scan(descriptions ...interface{}) error
+type row interface {
+	Scan(destinations ...interface{}) error
 	Err() error
 }
 
-func (r *dbRows) Next() bool {
-	return r.rows.Next()
+type dbRow struct {
+	row *sql.Row
 }
 
-func (r *dbRows) Close() error {
-	return r.rows.Close()
+func (r *dbRow) Scan(destinations ...interface{}) error {
+	return r.row.Scan(destinations...)
 }
 
-func (r *dbRows) Scan(descriptions ...interface{}) error {
-	return r.rows.Scan(descriptions...)
-}
-
-func (r *dbRows) Err() error {
-	return r.rows.Err()
+func (r *dbRow) Err() error {
+	return r.row.Err()
 }

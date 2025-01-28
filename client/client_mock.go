@@ -3,6 +3,7 @@ package dbclient
 import (
 	"errors"
 	"log"
+	"reflect"
 )
 
 var (
@@ -22,10 +23,61 @@ type Mock struct {
 	RowsErr error
 }
 
+func AddMock(mock Mock) {
+	if !isMock {
+		log.Println("mock server is off, therefore ignoring AddMock")
+		return
+	}
+
+	client, ok := dbClient.(*clientMock)
+	if !ok {
+		log.Println("invalid type of clientMock")
+		return
+	}
+
+	if client.mocks == nil {
+		client.mocks = make(map[string]Mock)
+	}
+
+	client.mocks[mock.Query] = mock
+
+}
+
+func StartMock() {
+	isMock = true
+}
+
+func StopMock() {
+	isMock = false
+}
+
+func (c *clientMock) Exec(query string, args ...any) (result, error) {
+	mock, exists := c.mocks[query]
+	if !exists {
+		return nil, errors.New("mock not found for query: " + query)
+	}
+
+	if !compareArgs(mock.Args, args) {
+		return nil, errors.New("mock not found for query and args: " + query)
+	}
+
+	if mock.Error != nil {
+		return nil, mock.Error
+	}
+
+	res := resultMock{Args: mock.Args}
+
+	return &res, nil
+}
+
 func (c *clientMock) Query(query string, args ...any) (rows, error) {
 	mock, exists := c.mocks[query]
 	if !exists {
 		return nil, errors.New("mock not found")
+	}
+
+	if !compareArgs(mock.Args, args) {
+		return nil, errors.New("mock not found for query and args: " + query)
 	}
 
 	if mock.Error != nil {
@@ -41,46 +93,38 @@ func (c *clientMock) Query(query string, args ...any) (rows, error) {
 	return &rows, nil
 }
 
-func (c *clientMock) Exec(query string, args ...any) (result, error) {
+func (c *clientMock) QueryRow(query string, args ...any) row {
 	mock, exists := c.mocks[query]
 	if !exists {
-		return nil, errors.New("mock not found")
+		return &rowMock{RowsErr: errors.New("mock not found for query: " + query)}
+	}
+
+	if !compareArgs(mock.Args, args) {
+		return &rowMock{
+			RowsErr: errors.New("mock not found for query and args: " + query),
+		}
 	}
 
 	if mock.Error != nil {
-		return nil, mock.Error
+		return &rowMock{Error: mock.Error}
 	}
 
-	result := resultMock{
-		Args: mock.Args,
+	return &rowMock{
+		Args:    mock.Args,
+		Columns: mock.Columns,
+		Rows:    mock.Rows,
+		Error:   mock.Error,
 	}
-
-	return &result, nil
 }
 
-func AddMock(mock Mock) {
-	if !isMock {
-		log.Println("mock server is off, therefore ignoring AddMock")
-		return
+func compareArgs(expected, actual []interface{}) bool {
+	if len(expected) != len(actual) {
+		return false
 	}
-
-	client, ok := dbClient.(*clientMock)
-	if !ok {
-		log.Println("invalid type of clientMock")
-		return
+	for i, v := range expected {
+		if !reflect.DeepEqual(v, actual[i]) {
+			return false
+		}
 	}
-
-	if client.mocks == nil {
-		client.mocks = make(map[string]Mock, 0)
-	}
-
-	client.mocks[mock.Query] = mock
-}
-
-func StartMock() {
-	isMock = true
-}
-
-func StopMock() {
-	isMock = false
+	return true
 }

@@ -6,21 +6,23 @@ import (
 	"reflect"
 )
 
-type rowMock struct {
-	Args    []interface{}
+type rowsMock struct {
 	Columns []string
 	Rows    [][]interface{}
-	Error   error
 	RowsErr error
 
 	rowIndex int
 }
 
-func (r *rowMock) Scan(destinations ...interface{}) error {
-	if r.Error != nil {
-		return r.Error
-	}
+func (r *rowsMock) Next() bool {
+	return r.rowIndex < len(r.Rows)
+}
 
+func (r *rowsMock) Close() error {
+	return nil
+}
+
+func (r *rowsMock) Scan(destinations ...interface{}) error {
 	if r.rowIndex >= len(r.Rows) {
 		return errors.New("no more rows to scan")
 	}
@@ -51,6 +53,6 @@ func (r *rowMock) Scan(destinations ...interface{}) error {
 	return nil
 }
 
-func (r *rowMock) Err() error {
+func (r *rowsMock) Err() error {
 	return r.RowsErr
 }

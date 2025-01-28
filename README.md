@@ -1,18 +1,17 @@
 # dbclient Library
 
-A simple, extensible Go library that abstracts away direct database interactions with PostgreSQL. 
-It offers both a production client (using the standard `database/sql` package) and a mock client for testing or development environments.
+A simple, extensible Go library that abstracts away direct database interactions with PostgreSQL. It offers both a production client (using the standard `database/sql` package) and a mock client for testing or development environments.
 
 ## Features
 
 - **Mock support**: Toggle mocking with `StartMock()` and `StopMock()` to return predefined queries and results.
 - **Production-ready**: Leverages `database/sql` to handle real database connections.
-- **Lightweight abstraction**: Provides `DBClient` interface for easy substitution in your project.
+- **Lightweight abstraction**: Provides a `DbClient` interface for easy substitution in your project.
 - **Type safety checks**: Ensures scanned column values match the expected types during mocking.
 
 ## Usage Example
 
-> **Note**: The following code snippet (similar to `main.go`) is **not** part of the library. It’s only to illustrate how you might use the `dbclient` library in your own application.
+> **Note**: The following code snippet (similar to a `main.go`) is **not** part of the library. It’s only to illustrate how you might use the `dbclient` library in your own application.
 
 ```go
 package main
@@ -49,19 +48,19 @@ func init() {
 func main() {
 	user, err := GetUser(1)
 	if err != nil {
-		fmt.Println("Error:", err)
+		log.Println("Error:", err)
 		return
 	}
 
-	fmt.Println("ID:", user.Id)
-	fmt.Println("Email:", user.Email)
+	log.Println("ID:", user.Id)
+	log.Println("Email:", user.Email)
 }
 
 func GetUser(id int) (*User, error) {
 	// Add a mock result for demonstration
 	dbclient.AddMock(dbclient.Mock{
 		// Error: errors.New("error creating query"),
-        Query:   "SELECT id, email FROM users WHERE id=$1",
+		Query:   "SELECT id, email FROM users WHERE id=$1",
 		Args:    []interface{}{id},
 		Columns: []string{"id", "email"},
 		Rows: [][]interface{}{
@@ -105,18 +104,13 @@ func GetUser(id int) (*User, error) {
     - **Production** (`client`): Executes a real `db.Query` and returns a `dbRows` wrapper around sql.Rows.
     - **Mock** (`clientMock`): Checks if a matching mock query is registered. If found, returns `rowsMock` with the predefined data.
 
-### Row Handling
-- Both `dbRows` (production) and `rowsMock` (mock) implement the same `rows` interface:
-    - `Next()`: Retrieves the next row.
-    - `Scan(...)`: Copies column data into destination variables.
-    - `Close()`: Closes the underlying rows resource.
+### Workflow Overview
 
-## Workflow Overview
-1. **Initialize:** Decide on production or mock mode.
-2. **Open Connection:** `dbclient.Open(...)` to get a `DbClient`.
-3. **Optionally Add Mocks:** If in mock mode, use `dbclient.AddMock(...)` to register - predefined responses.
-4. **Execute Queries:** Call `Query(...)` on the `DbClient`.
-5. **Process Results:** Use the returned `rows` interface to iterate and scan.
+- **Initialize:** Decide on production or mock mode.
+- **Open Connection:** Use `dbclient.Open(...)` to get a `DbClient`.
+- **Optionally Add Mocks:** If in mock mode, use `dbclient.AddMock(...)` to register - predefined responses.
+- **Execute Queries:** Call `Query(...)`, `QueryRow(...)`, or `Exec(...)`.
+- **Process Results:** Use your returned results to iterate and scan.
 
 ## Potential Improvements
 - **Connection Pool Configuration:** Extend `Open` to allow customizing max open/idle - connections, timeouts, etc.

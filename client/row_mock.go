@@ -9,6 +9,7 @@ import (
 type rowsMock struct {
 	Columns []string
 	Rows    [][]interface{}
+	RowsErr error
 
 	rowIndex int
 }
@@ -47,4 +48,8 @@ func (r *rowsMock) Scan(destinations ...interface{}) error {
 
 	r.rowIndex++
 	return nil
+}
+
+func (r *rowsMock) Err() error {
+	return r.RowsErr
 }

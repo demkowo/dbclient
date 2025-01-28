@@ -10,6 +10,7 @@ type rows interface {
 	Next() bool
 	Close() error
 	Scan(descriptions ...interface{}) error
+	Err() error
 }
 
 func (r *dbRows) Next() bool {
@@ -22,4 +23,8 @@ func (r *dbRows) Close() error {
 
 func (r *dbRows) Scan(descriptions ...interface{}) error {
 	return r.rows.Scan(descriptions...)
+}
+
+func (r *dbRows) Err() error {
+	return r.rows.Err()
 }

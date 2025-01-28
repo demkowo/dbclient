@@ -19,6 +19,7 @@ type Mock struct {
 	Error   error
 	Columns []string
 	Rows    [][]interface{}
+	RowsErr error
 }
 
 func (c *clientMock) Query(query string, args ...any) (rows, error) {
@@ -34,6 +35,7 @@ func (c *clientMock) Query(query string, args ...any) (rows, error) {
 	rows := rowsMock{
 		Columns: mock.Columns,
 		Rows:    mock.Rows,
+		RowsErr: mock.RowsErr,
 	}
 
 	return &rows, nil

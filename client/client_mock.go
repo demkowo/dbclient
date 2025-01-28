@@ -41,9 +41,26 @@ func (c *clientMock) Query(query string, args ...any) (rows, error) {
 	return &rows, nil
 }
 
+func (c *clientMock) Exec(query string, args ...any) (result, error) {
+	mock, exists := c.mocks[query]
+	if !exists {
+		return nil, errors.New("mock not found")
+	}
+
+	if mock.Error != nil {
+		return nil, mock.Error
+	}
+
+	result := resultMock{
+		Args: mock.Args,
+	}
+
+	return &result, nil
+}
+
 func AddMock(mock Mock) {
 	if !isMock {
-		log.Println("ignoring AddMock, because mock server is off")
+		log.Println("mock server is off, therefore ignoring AddMock")
 		return
 	}
 

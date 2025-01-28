@@ -23,6 +23,7 @@ type client struct {
 
 type DbClient interface {
 	Query(query string, args ...any) (rows, error)
+	Exec(query string, args ...any) (result, error)
 }
 
 func Open(driverName string, dataSourceName string) (DbClient, error) {
@@ -58,6 +59,10 @@ func (c *client) Query(query string, args ...any) (rows, error) {
 	}
 
 	return &res, nil
+}
+
+func (c *client) Exec(query string, args ...any) (result, error) {
+	return c.db.Exec(query, args...)
 }
 
 func isProduction() bool {

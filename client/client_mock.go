@@ -51,6 +51,10 @@ func StopMock() {
 	isMock = false
 }
 
+func (c *clientMock) Close() error {
+	return nil
+}
+
 func (c *clientMock) Exec(query string, args ...any) (result, error) {
 	mock, exists := c.mocks[query]
 	if !exists {

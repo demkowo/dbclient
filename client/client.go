@@ -18,6 +18,7 @@ var (
 )
 
 type DbClient interface {
+	Close() error
 	Exec(query string, args ...any) (result, error)
 	Query(query string, args ...any) (rows, error)
 	QueryRow(query string, args ...any) row
@@ -45,6 +46,10 @@ func Open(driverName string, dataSourceName string) (DbClient, error) {
 	dbClient := &client{db: database}
 
 	return dbClient, nil
+}
+
+func (c *client) Close() error {
+	return c.db.Close()
 }
 
 func (c *client) Exec(query string, args ...any) (result, error) {

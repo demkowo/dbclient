@@ -33,7 +33,6 @@ func (r *rowsMock) Scan(destinations ...interface{}) error {
 	}
 
 	row := r.Rows[r.rowIndex]
-	fmt.Println(len(row), "!=", len(destinations))
 	if len(row) != len(destinations) {
 		return errors.New("invalid destinations length")
 	}

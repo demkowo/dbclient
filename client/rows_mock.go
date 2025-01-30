@@ -10,6 +10,7 @@ type rowsMock struct {
 	Columns []string
 	Rows    [][]interface{}
 	RowsErr error
+	ScanErr error
 
 	rowIndex int
 }
@@ -23,11 +24,16 @@ func (r *rowsMock) Close() error {
 }
 
 func (r *rowsMock) Scan(destinations ...interface{}) error {
+	if r.ScanErr != nil {
+		return r.ScanErr
+	}
+
 	if r.rowIndex >= len(r.Rows) {
 		return errors.New("no more rows to scan")
 	}
 
 	row := r.Rows[r.rowIndex]
+	fmt.Println(len(row), "!=", len(destinations))
 	if len(row) != len(destinations) {
 		return errors.New("invalid destinations length")
 	}

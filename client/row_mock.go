@@ -10,15 +10,17 @@ type rowMock struct {
 	Args    []interface{}
 	Columns []string
 	Rows    [][]interface{}
-	Error   error
-	RowsErr error
+	Error   map[string]error
 
 	rowIndex int
 }
 
 func (r *rowMock) Scan(destinations ...interface{}) error {
-	if r.Error != nil {
-		return r.Error
+	if r.Error["QueryRow"] != nil {
+		return r.Error["QueryRow"]
+	}
+	if r.Error["Scan"] != nil {
+		return r.Error["Scan"]
 	}
 
 	if r.rowIndex >= len(r.Rows) {
@@ -52,5 +54,5 @@ func (r *rowMock) Scan(destinations ...interface{}) error {
 }
 
 func (r *rowMock) Err() error {
-	return r.RowsErr
+	return r.Error["Row"]
 }

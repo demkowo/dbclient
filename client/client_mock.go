@@ -1,6 +1,7 @@
 package dbclient
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -21,9 +22,7 @@ type Mock struct {
 	Columns       []string
 	Rows          [][]interface{}
 	ExpectedValue map[string]interface{}
-	Error         error
-	RowsErr       error
-	ScanErr       error
+	Error         map[string]error
 }
 
 func AddMock(mock Mock) {
@@ -62,15 +61,19 @@ func (c *clientMock) Exec(query string, args ...any) (result, error) {
 		log.Fatal("mock not found for query: " + query)
 	}
 
-	compareArgs(mock.Args, args)
+	if err := compareArgs(mock.Args, args); err != nil {
+		return nil, err
+	}
 
-	if mock.Error != nil {
-		return nil, mock.Error
+	if mock.Error["Exec"] != nil {
+		return nil, mock.Error["Exec"]
 	}
 
 	res := resultMock{Args: mock.Args}
 
-	checkExpectedValue(mock.ExpectedValue, args)
+	if err := checkExpectedValue(mock.ExpectedValue, args); err != nil {
+		return nil, err
+	}
 
 	return &res, nil
 }
@@ -78,23 +81,26 @@ func (c *clientMock) Exec(query string, args ...any) (result, error) {
 func (c *clientMock) Query(query string, args ...any) (rows, error) {
 	mock, exists := c.mocks[query]
 	if !exists {
-		log.Fatal("mock not found for query: " + query)
+		return nil, errors.New("mock not found for query: " + query)
 	}
 
-	compareArgs(mock.Args, args)
+	if err := compareArgs(mock.Args, args); err != nil {
+		return nil, err
+	}
 
-	if mock.Error != nil {
-		return nil, mock.Error
+	if mock.Error["Query"] != nil {
+		return nil, mock.Error["Query"]
 	}
 
 	rows := rowsMock{
 		Columns: mock.Columns,
 		Rows:    mock.Rows,
-		RowsErr: mock.RowsErr,
-		ScanErr: mock.ScanErr,
+		Error:   mock.Error,
 	}
 
-	checkExpectedValue(mock.ExpectedValue, args)
+	if err := checkExpectedValue(mock.ExpectedValue, args); err != nil {
+		return nil, err
+	}
 
 	return &rows, nil
 }
@@ -105,13 +111,21 @@ func (c *clientMock) QueryRow(query string, args ...any) row {
 		log.Fatal("mock not found for query: " + query)
 	}
 
-	compareArgs(mock.Args, args)
-
-	if mock.Error != nil {
-		return &rowMock{Error: mock.Error}
+	if err := compareArgs(mock.Args, args); err != nil {
+		mock.Error["Scan"] = err
+		return nil
 	}
 
-	checkExpectedValue(mock.ExpectedValue, args)
+	if mock.Error["QueryRow"] != nil {
+		return &rowMock{
+			Error: mock.Error,
+		}
+	}
+
+	if err := checkExpectedValue(mock.ExpectedValue, args); err != nil {
+		mock.Error["Scan"] = err
+		return nil
+	}
 
 	return &rowMock{
 		Args:    mock.Args,
@@ -121,12 +135,12 @@ func (c *clientMock) QueryRow(query string, args ...any) row {
 	}
 }
 
-func compareArgs(expected, actual []interface{}) {
+func compareArgs(expected, actual []interface{}) error {
 	// TODO: solve issue with time.Now() executed in both test case and tested method
 	if len(expected) > len(actual) {
-		log.Fatal("number of arguments in mock can't be higher than number of arguments in method:\n", expected, "\n", actual)
+		return errors.New(fmt.Sprint("number of arguments in mock can't be higher than number of arguments in method:\n", expected, "\n", actual))
 	} else if len(expected) < len(actual) {
-		log.Fatal("number of arguments in method can't be higher than number of arguments in mock:\n", expected, "\n", actual)
+		return errors.New(fmt.Sprint("number of arguments in method can't be higher than number of arguments in mock:\n", expected, "\n", actual))
 	}
 
 	ok := true
@@ -136,28 +150,26 @@ func compareArgs(expected, actual []interface{}) {
 		}
 		if !reflect.DeepEqual(v, actual[i]) {
 			ok = false
-			fmt.Println("\t", i+1, v, " != ", actual[i])
 		}
 	}
 
 	if !ok {
-		log.Fatal("invalid mock, args in mock and method are not equal: ")
+		return errors.New("invalid mock, args in mock and method are not equal: ")
 	}
+	return nil
 }
 
-func checkExpectedValue(expectedValue map[string]interface{}, args []interface{}) {
-	fmt.Println("=== mock client checkExpectedValue ===")
-
+func checkExpectedValue(expectedValue map[string]interface{}, args []interface{}) error {
 	if expectedValue["index"] != nil && len(args) != 0 {
 		index := expectedValue["index"]
 		i, ok := index.(int)
 		if !ok {
-			log.Fatal("ExpectedValue[\"index\"] should be of type int")
+			return errors.New("ExpectedValue[\"index\"] should be of type int")
 		}
 
-		fmt.Println("===", args[i], expectedValue["value"])
 		if !reflect.DeepEqual(args[i], expectedValue["value"]) {
-			log.Fatalf("expected expectedVaule type should be equal %v while is %v", expectedValue["value"], args[i])
+			return fmt.Errorf("\n\texpected vaule: %v\n\treceived value: %v", expectedValue["value"], args[i])
 		}
 	}
+	return nil
 }

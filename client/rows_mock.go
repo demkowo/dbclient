@@ -9,8 +9,7 @@ import (
 type rowsMock struct {
 	Columns []string
 	Rows    [][]interface{}
-	RowsErr error
-	ScanErr error
+	Error   map[string]error
 
 	rowIndex int
 }
@@ -24,8 +23,8 @@ func (r *rowsMock) Close() error {
 }
 
 func (r *rowsMock) Scan(destinations ...interface{}) error {
-	if r.ScanErr != nil {
-		return r.ScanErr
+	if r.Error["Scan"] != nil {
+		return r.Error["Scan"]
 	}
 
 	if r.rowIndex >= len(r.Rows) {
@@ -59,5 +58,5 @@ func (r *rowsMock) Scan(destinations ...interface{}) error {
 }
 
 func (r *rowsMock) Err() error {
-	return r.RowsErr
+	return r.Error["Rows"]
 }

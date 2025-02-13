@@ -17,12 +17,11 @@ type clientMock struct {
 }
 
 type Mock struct {
-	Query         string
-	Args          []interface{}
-	Columns       []string
-	Rows          [][]interface{}
-	ExpectedValue map[string]interface{}
-	Error         map[string]error
+	Query   string
+	Args    []interface{}
+	Columns []string
+	Rows    [][]interface{}
+	Error   map[string]error
 }
 
 func AddMock(mock Mock) {
@@ -71,10 +70,6 @@ func (c *clientMock) Exec(query string, args ...any) (result, error) {
 
 	res := resultMock{Args: mock.Args}
 
-	if err := checkExpectedValue(mock.ExpectedValue, args); err != nil {
-		return nil, err
-	}
-
 	return &res, nil
 }
 
@@ -98,10 +93,6 @@ func (c *clientMock) Query(query string, args ...any) (rows, error) {
 		Error:   mock.Error,
 	}
 
-	if err := checkExpectedValue(mock.ExpectedValue, args); err != nil {
-		return nil, err
-	}
-
 	return &rows, nil
 }
 
@@ -120,11 +111,6 @@ func (c *clientMock) QueryRow(query string, args ...any) row {
 		return &rowMock{
 			Error: mock.Error,
 		}
-	}
-
-	if err := checkExpectedValue(mock.ExpectedValue, args); err != nil {
-		mock.Error["Scan"] = err
-		return nil
 	}
 
 	return &rowMock{
@@ -155,21 +141,6 @@ func compareArgs(expected, actual []interface{}) error {
 
 	if !ok {
 		return errors.New("invalid mock, args in mock and method are not equal: ")
-	}
-	return nil
-}
-
-func checkExpectedValue(expectedValue map[string]interface{}, args []interface{}) error {
-	if expectedValue["index"] != nil && len(args) != 0 {
-		index := expectedValue["index"]
-		i, ok := index.(int)
-		if !ok {
-			return errors.New("ExpectedValue[\"index\"] should be of type int")
-		}
-
-		if !reflect.DeepEqual(args[i], expectedValue["value"]) {
-			return fmt.Errorf("\n\texpected vaule: %v\n\treceived value: %v", expectedValue["value"], args[i])
-		}
 	}
 	return nil
 }
